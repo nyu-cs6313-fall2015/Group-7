@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="refresh" content="300">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>TwittorMonitor</title>
+    <link rel="stylesheet" type="text/css" href="index.css" />
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC5fwhqHz6t9wxInNrzyqfsPXwbyKQlYfQ&signed_in=true"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
+    <script src="d3.layout.cloud.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.min.js"></script>
+</head>
+<body>
+  <div id="title">
+    <div id="titleImage"></div>
+    <div id="titleText">Twittor Monitor</div>
+  </div>
+  <div id="content">
+    <div id="mapDiv">
+      <div class="title">
+        Map
+      </div>
+      <div id="map"></div>
+    </div>
+    <div id="mapLegend">
+      <div class="title">Legend</div>
+      <div id="legendContent" class="divContent"></div>
+    </div>
+    <div id="rightColumn">
+      <div id="EntityList" class="rightDiv">
+        <div class="title">Entity List</div>
+        <div id="EntityContent" class="divContent"></div>
+      </div>
+
+      <div id="TweetList" class="rightDiv">
+        <div class="title">Tweet List</div>
+        <div id="listContent" class="divContent"></div>
+      </div>
+      <div id="UserList" class="rightDiv">
+        <div class="title">User List</div>
+        <div id="userContent" class="divContent"></div>
+      </div>
+    </div>
+  </div>
+  <div id="tooltip">
+    <span id="tooltipText"></span>
+  </div>
+  
+</body>
+</html>
+<script>
+/*---------------------Google Map-------------------*/
+var width = 7; // the width of the matrix
+var height = 7; // the height of the matrix
+var map; // google map object
+var infoWindow; // infoWindow, show the keyword and other parameters
+var overlay = new Array(); // overlay array
+var visRectangle = new Array(); // rectangle and overlay array
+TXTOverlay.prototype = new google.maps.OverlayView();
+
+function initMap() {
+  map = new google.maps.Map(document.getElementById('map'), {
+    zoom: 13,
+    center: {lat: 40.719601, lng: -73.963501},
+    mapTypeId: google.maps.MapTypeId.SATELLITE,
+    heading: 0,
+    tilt: 60 
+  });
+  infoWindow = new google.maps.InfoWindow();
+  pageRefresh();
+}
+
+function updateMap() {
+
+  // Draw Legend
+  drawLegend();
+
+  // Get data from database
+  $.post("placesql.php", {})
+    .done(function(places)
+    {      
+      var data = JSON.parse(places);      
+      var txt = new Array()
+      var relevance = new Array()
+      var time = new Array()
+  
+
+      for (var i = 0; i < height*width; i++) {
+        txt[i] = new Array();
+        relevance[i] = new Array()
+        time[i] = new Array()
+      }      
+      for (idx in data) {
+        var id = data[idx]['Areaid'];
+        if(id < height*width) {
+          txt[id].push(data[idx]['Entity']);
+          relevance[id].push(data[idx]['Relevance']);
+          time[id].push(data[idx]['Time']);
+        }
+      }
+
+      // Draw Map
+      var b = [];
+      b.push({name:"NorthEast", latlng: new google.maps.LatLng(40.878192, -73.909766)})
+      b.push({name:"SouthWest", latlng: new google.maps.LatLng(40.699885, -74.021867)})
+      var bounds = new google.maps.LatLngBounds();
+      for (var i = 0; i < b.length; i++) {
+        bounds.extend(b[i].latlng);   
+      }
+      map.fitBounds(bounds);
+
+      baseLat = (b[0].latlng.lat() - b[1].latlng.lat()) / height;  
+      baseLng = (b[0].latlng.lng() - b[1].latlng.lng()) / width;  
+
+      for (var h = 0; h < height; h++) {
+        for (var w = 0; w < width; w++) {
+          var rectangle = new google.maps.Rectangle({
+            map: map,
+            bounds: new google.maps.LatLngBounds (
+              new google.maps.LatLng(b[1].latlng.lat()+h*baseLat, b[1].latlng.lng()+w*baseLng),
+              new google.maps.LatLng(b[1].latlng.lat()+(h+1)*baseLat, b[1].latlng.lng()+(w+1)*baseLng)
+            ),
+            strokeWeight: 0.5,
+            visible: true,
+          })
+
+      
+          var id = h*width+w;
+          overlay[id] = new TXTOverlay(rectangle.bounds, txt[id], relevance[id], time[id], map);
+          visRectangle[id] = new VisRectangle(id, rectangle, overlay[id]);
+        }
+      }
+
+    // bound change
+      google.maps.event.addListener(map, "bounds_changed", function() {
+        zoom = map.getZoom();  
+        if (zoom < 13) {
+          for(var i = 0; i < overlay.length; i++) {
+            overlay[i].hide();
+          }
+        }
+        else {
+          for(var i = 0; i < overlay.length; i++) {
+            overlay[i].show();
+          } 
+        }
+      })
+    })
+}
+
+
+function VisRectangle(id, GRectangle, GOverlay) {
+  this.id_ = id;
+  this.rectangle_ = GRectangle;
+  this.overlay_ = GOverlay;
+  this.rectangle_.addListener('click', function() {rectClicked(id, GRectangle, GOverlay)});
+//  this.rectangle_.addListener('mouseover', function() {rectMouseOver(id, GRectangle, GOverlay)});
+}
+
+// run after rectangle is clicked
+function rectClicked(id, rectangle, overlay) {
+  changeTweetList(id, overlay.txt_)
+  //var txt = id + "</br>";
+  //document.getElementById("listContent").innerHTML = txt;
+  var ne = rectangle.getBounds().getNorthEast();
+  var sw = rectangle.getBounds().getSouthWest();
+
+  /*var contentString = '<b>' + overlay.txt_ + '</b><br>' + 
+    'New north-east corner: ' + ne.lat() + ', ' + ne.lng() + '<br>' + 
+    'New south-west corner: ' + sw.lat() + ', ' + sw.lng();*/
+  var contentString = '';
+  for (idx in overlay.txt_) {
+    contentString += '<b>' + overlay.txt_[idx] + '</b><br>';
+    contentString += '<I>' + 'Relevance: ' + '</I>' + overlay.relevance_[idx] + '<br>';
+    //contentString += '<I>' + 'First Appearance: ' + '</I>' + overlay.time_[idx] + '<br>';
+  }
+  var center = new google.maps.LatLng(sw.lat() + (ne.lat()-sw.lat())/2, sw.lng() + (ne.lng()-sw.lng())/2);
+
+  infoWindow.setContent(contentString);
+  infoWindow.setPosition(center)
+  infoWindow.open(map);
+
+}
+
+// run after mouseover it
+function rectMouseOver(id, rectangle, overlay) {
+  var ne = rectangle.getBounds().getNorthEast();
+  var sw = rectangle.getBounds().getSouthWest();
+
+  var contentString = '<b>' + overlay.txt_ + '</b><br>' + 
+    'New north-east corner: ' + ne.lat() + ', ' + ne.lng() + '<br>' + 
+    'New south-west corner: ' + sw.lat() + ', ' + sw.lng();
+  var center = new google.maps.LatLng(sw.lat() + (ne.lat()-sw.lat())/2, sw.lng() + (ne.lng()-sw.lng())/2);
+
+  infoWindow.setContent(contentString);
+  infoWindow.setPosition(center)
+  infoWindow.open(map);
+}
+/** @constructor */
+function TXTOverlay(bounds, txt, relevance, time, map) {
+
+  this.bounds_ = bounds;
+  this.txt_ = txt;
+  this.relevance_ = relevance;
+  this.time_ = time;
+  this.age_ = getDisMinute(time);
+  this.map_ = map;
+  this.div_ = null;
+  this.setMap(map);
+}
+
+TXTOverlay.prototype.onAdd = function() {
+
+  var div = document.createElement('div');
+  div.style.border = 'none';
+  div.style.borderWidth = '0px';
+  div.style.position = 'absolute';
+
+  for (idx in this.txt_) {
+    var label = document.createElement('label');
+    
+    label.innerHTML = this.txt_[idx] +'</br>' + '</br>';
+    label.style.width = '10px';
+    label.style.height = '10px';
+    label.style.fontWeight = 'bold';
+    label.style.fontSize = getFontSize(this.relevance_[idx])
+    label.style.color = getFontColor(this.age_[idx])
+    label.style.position = 'relative';
+    label.click(function() {
+      console.log('here');
+    });
+    div.appendChild(label);
+  }
+  /*var img = document.createElement('img');
+  if (this.type_ == "up") {
+    img.src = "./images/up.png";   
+  } 
+  img.style.marginLeft = '5px';
+  img.style.width = '10px';
+  img.style.height = '10px';
+  img.style.position = 'relative';
+  div.appendChild(img);*/
+
+  this.div_ = div;
+
+  var panes = this.getPanes();
+  panes.overlayImage.appendChild(this.div_);
+};
+
+TXTOverlay.prototype.draw = function() {
+
+  var overlayProjection = this.getProjection();
+  var sw = overlayProjection.fromLatLngToDivPixel(this.bounds_.getSouthWest());
+  var ne = overlayProjection.fromLatLngToDivPixel(this.bounds_.getNorthEast());
+
+  var div = this.div_;
+  div.style.left = sw.x + 'px';
+  div.style.top = ne.y + 'px';
+  div.style.width = (ne.x - sw.x) + 'px';
+  div.style.height = (sw.y - ne.y) + 'px';
+};
+
+TXTOverlay.prototype.hide = function() {
+  if (this.div_) {
+    this.div_.style.visibility = 'hidden';
+  }
+};
+
+TXTOverlay.prototype.show = function() {
+  if (this.div_) {
+    this.div_.style.visibility = 'visible';
+  }
+};
+
+google.maps.event.addDomListener(window, 'load', initMap);
+
+function getDisMinute(time) {
+  var ages = new Array();
+  var nowDate = new Date();
+  //var now = getFormalDate();
+  //var nowDate = new Date(now)
+  for (id in time) {
+    //console.log(time[id]);
+    var tweetDate = new Date(time[id]);
+    var disDate = nowDate.getTime() - tweetDate.getTime();
+    var disMinute= disDate/1000/60;
+    ages[id] = parseInt(disMinute);
+  }
+  return ages;
+}
+
+function getFormalDate() {
+  x = new Date();
+  y = 'yyyy-MM-dd hh:mm:ss';
+  var z = {
+     y: x.getFullYear(),
+     M: x.getMonth() + 1,
+     d: x.getDate(),
+     h: x.getHours(),
+     m: x.getMinutes(),
+     s: x.getSeconds()
+  };
+  return y.replace(/(y+|M+|d+|h+|m+|s+)/g, function(v) {
+     return ((v.length > 1 ? "0" : "") + eval('z.' + v.slice(-1))).slice(-(v.length > 2 ? v.length : 2))
+  });
+}
+function getFontSize(relevance) {
+    rel = parseInt(relevance / 0.2);
+    scale = 0.3;
+    switch(rel) {
+      case 0:
+        return scale*1 + 'em';
+      case 1:
+        return scale*3 + 'em';
+      case 2:
+        return scale*4 + 'em';
+      case 3:
+        return scale*5 + 'em';
+      case 4:
+        return scale*6 + 'em';
+      case 5:
+        return scale*6 + 'em';
+    }
+}
+
+function getFontColor(age) {
+    scale = 30;
+    rel = parseInt(age / scale);
+    switch(rel) {
+      case 0: // 0~29 minute
+        return '#b30000';
+      case 1: // 30~59
+        return '#e34a33';
+      case 2: 
+        return '#fc8d59';
+      case 3:
+        return '#fdcc8a';
+      default :
+        return '#fef0d9';
+    }
+}
+
+function drawLegend() {
+  var div = document.getElementById('legendContent');
+  var label = document.createElement('label');
+  label.innerHTML = '<b>' + 'Relevance' + '</b>' + '</br>';
+  div.appendChild(label);
+  for(var i = 0; i < 5; i++) {
+    var row = document.createElement('div');
+    var label = document.createElement('label');
+    var font = document.createElement('label');
+    label.style.fontSize = '5px';
+    font.innerHTML = 'T';
+    if(i == 0) {
+      label.innerHTML = ' 0~0.2';
+      font.style.fontSize = '0.3em';
+    }
+    if(i == 1) {
+      label.innerHTML = ' 0.2~0.4';
+      font.style.fontSize = '0.9em';
+    }
+    if(i == 2) {
+      label.innerHTML = ' 0.4~0.6';
+      font.style.fontSize = '1.2em';
+    }
+    if(i == 3) {
+      label.innerHTML = ' 0,6~0.8';
+      font.style.fontSize = '1.5em';
+    }
+    if(i == 4) {
+      label.innerHTML = ' 0.8~1';
+      font.style.fontSize = '1.8em';
+    }
+    row.appendChild(font);
+    row.appendChild(label);
+    div.appendChild(row);
+  }
+  /*for(var i = 0; i < 5; i++) {
+    var label = document.createElement('label');
+    $('label').addClass('LegendLabel');
+    label.id = i;
+    label.innerHTML = 'T' + '</br> ';
+    label.style.fontSize = getFontSize(0.2*(i));
+    $('.LegendLabel').on('mouseover', function(e) {
+      this.style.color = 'yellow';
+      var x = 10;
+      var y = 20;
+      var tooltip= d3.select("#tooltip")
+      if(this.id == 0) 
+        tooltip.select('#tooltipText').text('0~0.2')
+      if(this.id == 1) 
+        tooltip.select('#tooltipText').text('0.2~0.4')
+      if(this.id == 2) 
+        tooltip.select('#tooltipText').text('0.4~0.6')
+      if(this.id == 3) 
+        tooltip.select('#tooltipText').text('0.6~0.8')
+      if(this.id == 4) 
+        tooltip.select('#tooltipText').text('0.8~1')
+      tooltip.style({
+        'display': 'block',
+        "top": e.pageY + y  + "px",
+        "left": (e.pageX + x) + "px"
+      })
+    console.log('here');
+    })   
+    div.appendChild(label);
+  }
+  $('.LegendLabel').on('mouseout', function() {
+    this.style.color = 'black';
+    var tooltip= d3.select("#tooltip")
+    tooltip.style({
+      'display': 'none'
+    })
+  })*/
+  var label = document.createElement('label');
+  label.innerHTML = '<br>' + '<b>' + 'Age' + '</b>' + '</br>';
+  div.appendChild(label);
+  for(var i = 0; i < 5; i++) {
+    var row = document.createElement('div');
+    var label = document.createElement('label');
+    var square = document.createElement('div');
+    square.style.width = '20px';
+    square.style.height = '20px';
+    label.style.fontSize = '5px';
+    if(i == 0) {
+      label.innerHTML = ' 0~29min';
+      square.style.background = '#b30000';
+    }
+    if(i == 1) {
+      label.innerHTML = ' 30~59min';
+      square.style.background = '#e34a33';
+    }
+    if(i == 2) {
+      label.innerHTML = ' 1~1.5h';
+      square.style.background = '#fc8d59';
+    }
+    if(i == 3) {
+      label.innerHTML = ' 1.5~2h';
+      square.style.background = '#fdcc8a';
+    }
+    if(i == 4) {
+      label.innerHTML = ' >2h';
+      square.style.background = '#fef0d9';
+    }
+    row.appendChild(square);
+    row.appendChild(label);
+    div.appendChild(row);
+  }
+}
+/*function drawLegend() {
+  d3.select("#lists").attr("width", 90);
+  d3.select("#lists").attr("height", 300);
+
+  var labels = new Array();
+  labels[0] = {
+    id: 0
+  };
+  labels[1] = {
+    id: 1
+  }
+
+  var selection = d3.select("#lists")
+    .selectAll("text")
+    .data(labels, function(d){return d.id;});
+  
+  selection.enter()
+    .append("text")
+    .text("hello")
+    .attr("size", 1.5+'em')
+    .on('mouseover', function(d){
+      console.log("mouseover")
+      d3.select(this)
+        .attr("color", "yellow");
+      var tooltip = d3.select("#tooltip")
+      tooltip.select('#tooltipText').text("test")
+      tooltip.style({
+        'display': 'block',
+        'top': d3.event.y + "px",
+        'left': d3.event.x + 2 + "px"
+      })
+    }).on('mouseout', function() {
+      d3.select(this)
+      var tooltip = d3.select("#tooltip");
+      tooltip.style({
+        'display': 'none'
+      })
+    });
+
+  selection.exit().remove();
+}*/
+
+function changeTweetList(id, entities) {
+  var div = document.getElementById('EntityContent');
+  div.innerHTML="";
+
+  var btn = new Array();
+  for(idx in entities) {
+    btn[idx] = document.createElement('button');
+    btn[idx].innerHTML = entities[idx];
+    btn[idx].id = entities[idx];
+    btn[idx].isClicked = 0;
+    btn[idx].onclick = function() {
+      if(this.isClicked == 0) {
+        this.isClicked = 1;
+        this.style.opacity = 0.3;
+      }
+      else {
+        this.isClicked = 0;
+        this.style.opacity = 1;
+      }
+      // Update Tweet List
+      updateTweetList(id, btn);
+      // Update User List
+      updateUserList(id, btn);
+    }
+    if(idx == 0)
+      btn[idx].style.background = 'rgb(166, 216, 84)';
+    else if(idx == 1)
+      btn[idx].style.background = 'rgb(102, 194, 165)';
+    else if(idx == 2)
+      btn[idx].style.background = 'rgb(252, 141, 98)';
+    else if(idx == 3)
+      btn[idx].style.background = 'rgb(231, 138, 195)';
+    else if(idx == 4)
+      btn[idx].style.background = 'rgb(229, 196, 148)';
+    div.appendChild(btn[idx]);
+  }
+  // Update Tweet List
+  updateTweetList(id, btn);
+  // Update User List
+  updateUserList(id, btn);
+}
+
+function updateTweetList(id, btn) {
+  var entities = new Array
+  for(idx in btn) {
+    if(btn[idx].isClicked == 0) 
+      entities.push(btn[idx].id);
+  }
+  // Search for tweets
+  searchTweets(id, entities);
+}
+
+function searchTweets(id, entities) {
+  //console.log("here");
+  var div = document.getElementById('listContent');
+  div.innerHTML = '';
+  var nowDate = new Date();
+  $.post("tweetsql.php", {id: id, entities: entities})
+    .done(function(data) {
+      var tweets = JSON.parse(data);  
+
+      // Sorted by Followers    
+      tweets.sort(function(a, b) {return b.Followers-a.Followers;});
+      for(idx in tweets) {
+        /* 
+        是否只显示最近一小时的tweet       
+        var tweetDate = new Date(tweets[idx]['Time']);
+        var disDate = nowDate.getTime() - tweetDate.getTime();
+        var disMinute = parseInt(disDate/1000/60);
+        if(disMinute > 60){
+          continue;
+        }*/
+
+        var _div = document.createElement('div');
+        var _username = document.createElement('label');
+        var _tweet = document.createElement('label');
+        var _time = document.createElement('label');
+        var _followers = document.createElement('label');
+        
+        _username.innerHTML = tweets[idx]['Username'] + '<br>';
+        _tweet.innerHTML = tweets[idx]['Tweet'] + '<br>';
+        _time.innerHTML = tweets[idx]['Time'] + ' ' + ' ';
+        _followers.innerHTML = 'Followers: ' + tweets[idx]['Followers'];
+
+        _div.style.padding = '1px';
+        /*_div.style.borderTop = '0.5px';
+        _div.style.borderBottom = '0px';
+        _div.style.borderLeft = '0px';
+        _div.style.borderRight = '0px';
+        _div.style.borderStyle = 'solid';*/
+        if(idx % 2 == 0)
+          _div.style.background = 'white';
+
+        _username.style.fontSize = '1.2em';
+        _time.style.fontSize = '0.5em';
+        _followers.style.fontSize = '0.5em';
+
+        _div.appendChild(_username);
+        _div.appendChild(_tweet);
+        _div.appendChild(_time);
+        _div.appendChild(_followers);
+        div.appendChild(_div);
+
+      }
+    });
+}
+
+function updateUserList(id, btn) {
+  var entities = new Array
+  for(idx in btn) {
+    if(btn[idx].isClicked == 0) 
+      entities.push(btn[idx].id);
+  }
+  // Search for Users
+  searchUsers(id, entities);
+
+}
+
+function searchUsers(id, entities) {
+  var div = document.getElementById('userContent');
+  div.innerHTML = '';
+  $.post("usersql.php", {id: id, entities: entities})
+    .done(function(data) {
+      var users = JSON.parse(data);
+      users.sort(function(a, b) {return b.Followers - a.Followers;});
+      var btn = new Array();
+      for(idx in users) {
+        /* Only show tweets within one hour
+        var tweetDate = new Date(tweets[idx]['Time']);
+        var disDate = nowDate.getTime() - tweetDate.getTime();
+        var disMinute = parseInt(disDate/1000/60);
+        if(disMinute > 60){
+          continue;
+        }*/
+        btn[idx] = document.createElement('button');
+        btn[idx].innerHTML = users[idx]['Username']
+        if(idx%5 == 0)
+          btn[idx].style.background = 'rgb(166, 216, 84)';
+        else if(idx%5 == 1)
+          btn[idx].style.background = 'rgb(102, 194, 165)';
+        else if(idx%5 == 2)
+          btn[idx].style.background = 'rgb(252, 141, 98)';
+        else if(idx%5 == 3)
+          btn[idx].style.background = 'rgb(231, 138, 195)';
+        else if(idx%5 == 4)
+          btn[idx].style.background = 'rgb(229, 196, 148)';
+        div.appendChild(btn[idx]);
+      }
+    })  
+}
+
+function getColor(btn) {
+  switch(idx) {
+    case 0: 
+      btn.style.background = 'rgb(102, 194, 165)';
+      return;
+    case 1: 
+      btn.style.background = 'rgb(252, 141, 98)';
+      return;
+    case 2: 
+      btn.style.background = 'rgb(141, 160, 203)';
+      return;
+    case 3: 
+      btn.style.background = 'rgb(231, 138, 195)';
+      return;
+    case 4: 
+      btn.style.background = 'rgb(166, 216, 84)';
+      return;
+  }
+
+}
+
+/*function testReturnData(data) {
+	console.log(data);
+}*/
+
+/*----------------------Web Page------------------*/
+function pageRefresh() {
+  updateMap();
+  //updateTagCloud();
+}
+</script>

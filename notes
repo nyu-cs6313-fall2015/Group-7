@@ -1,0 +1,7 @@
+table tweets
+
+	Username Followers Time Areaid Tweet
+
+table keyword
+	
+	Areaid Relevance Time Entity New

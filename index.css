@@ -1,0 +1,185 @@
+html, body {
+  background-color: #455A64;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+#title {
+  height:50px; 
+  width: 100%;
+  background-color: #4387fd;
+}
+#titleText:hover {
+  opacity: 1;
+}
+#titleText {
+  font-size: 30px;
+  font-weight: 300;
+  letter-spacing: 1px;
+  color: #fff;
+  opacity: 0.6;
+  text-align: center;
+  padding: 0 50px 0 50px;
+  margin: 0;
+  line-height: 50px;
+  width: 300px;
+  height: 40px;
+  position: absolute;
+}
+#titleImage {
+  background-image: url("./images/monitor.png");
+  background-size: cover;
+  width: 40px;
+  height: 40px;
+  left: 40px;
+  margin-top: 5px;
+  position: absolute;
+}
+#content {
+  top: 50px;
+  width: 100%;
+}
+#mapDiv {
+  margin-top: 10px;
+  left: 20px;
+  width: 55%;
+  height: 100%;
+  position: absolute;
+  padding: 20px, 20px, 20px, 20px;
+}
+.divContent {
+  background-color: #CFD8DC;
+  width: 100%;
+  height: 280px;
+  border: 1px;
+  border-radius: 0 0 5px 5px;
+  //overflow: scroll;
+}
+#legendContent {
+  height: 380px;
+}
+.title {
+  font-size: 20px;
+  height: 30px;
+  left: 10px;
+  padding-top: 10px;
+  padding-left: 10px;
+  margin-bottom: 0px;
+  background-color: #2196F3;
+  border-radius: 5px 5px 0px 0px;
+  border-bottom: 2px solid;
+  border-color: #FFC107;
+  color: #FFFFFF;
+}
+
+#mapAndLegend {
+  height: 100%;
+  width: 60%;
+
+}
+
+#map{
+  border: 1px solid;
+  height: 90%;
+}
+#rightColumn {
+  height: 100%;
+  width: 35%;
+  left: 64%;
+  position: absolute;
+}
+#mapLegend {
+  height: 600px;
+  width: 7%;
+  left:55%;
+  margin-left: 20px;
+  margin-top: 50px;
+  position: absolute;
+  
+}
+
+.rightDiv {
+  margin-top: 10px;
+
+}
+#lists {
+  background-color: #CFD8DC;
+}
+#tooltip {
+  position: absolute;
+  background-color: white;
+  border: solid 1px #000;
+  width: 150px;
+  display: none;
+}
+#tooltipText {
+  font-weight: bold;
+  display: block;
+}
+button {
+  display: inline-block;
+  height: 30px;
+  padding: 0 20px;
+  color: #555;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 30px;
+  letter-spacing: .1rem;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  background-color: transparent;
+  border-radius: 4px;
+  border: 1px solid #bbb;
+  cursor: pointer;
+  box-sizing: border-box;
+  margin-left: 5px;
+  margin-right: 5px;
+  margin-top: 5px;
+  margin-bottom:5px;
+}
+button:hover {
+  opacity: 0.5;
+}
+#EntityContent {
+  height: 100px;
+  overflow: scroll;
+}
+#listContent {
+  overflow: scroll;
+}
+#userContent {
+  overflow: scroll;
+}
+
+#EntityList {
+  height: 150px;
+}
+#UserList .divContent{
+  height: 110px;
+}
+.wrap {
+  display: inline-block;
+  height: 30px;
+  padding: 0 20px;
+  color: #555;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 30px;
+  letter-spacing: .1rem;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  background-color: transparent;
+  border-radius: 4px;
+  border: 1px solid #bbb;
+  cursor: pointer;
+  box-sizing: border-box;
+  margin-left: 5px;
+  margin-right: 5px;
+  margin-top: 5px;
+  margin-bottom:5px;
+}
