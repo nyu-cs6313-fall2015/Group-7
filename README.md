@@ -7,9 +7,10 @@ Zhangxi Lin zhangxi.lin@nyu.edu, Kushal Singh kushal.singh@nyu.edu
 
 ## Describtion
 ### Goal
-    In this project, we aim to produce a twitter monitor from which the user can know that if there¡¯s something happen in the Manhattan and what is happening.
+
+In this project, we aim to produce a twitter monitor from which the user can know that if there¡¯s something happen in the Manhattan and what is happening.
 ### Method
-    Our monitor will keep collecting data from twitter using twitter API. Then we will find out the hottest keyword in the data and project it on the map. From the keyword showed on the map, we can know what's going on in that region.
+Our monitor will keep collecting data from twitter using twitter API. Then we will find out the hottest keyword in the data and project it on the map. From the keyword showed on the map, we can know what's going on in that region.
 
 ## Video
 https://vimeo.com/149606052
