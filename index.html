@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta http-equiv="refresh" content="300">
+    <meta http-equiv="refresh" content="900">
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
     <meta charset="utf-8">
     <title>TwittorMonitor</title>
@@ -63,10 +63,22 @@ function initMap() {
   map = new google.maps.Map(document.getElementById('map'), {
     zoom: 13,
     center: {lat: 40.719601, lng: -73.963501},
-    mapTypeId: google.maps.MapTypeId.SATELLITE,
+    mapTypeId: google.maps.MapTypeId.ROADMAP,
     heading: 0,
-    tilt: 60 
+    tilt: 60,
+    mapTypeId: 'mystyle',
+
   });
+  var myStyle = [
+    {
+      featureType: "all",
+      elementType: "labels",
+      stylers: [
+        { visibility: "off" }
+      ]
+    }
+  ]
+  map.mapTypes.set('mystyle', new google.maps.StyledMapType(myStyle, { name: 'My Style' }));
   infoWindow = new google.maps.InfoWindow();
   pageRefresh();
 }
@@ -166,15 +178,15 @@ function rectClicked(id, rectangle, overlay) {
   var ne = rectangle.getBounds().getNorthEast();
   var sw = rectangle.getBounds().getSouthWest();
 
-  /*var contentString = '<b>' + overlay.txt_ + '</b><br>' + 
+  var contentString = '<b>' + overlay.txt_ + '</b><br>' + 
     'New north-east corner: ' + ne.lat() + ', ' + ne.lng() + '<br>' + 
-    'New south-west corner: ' + sw.lat() + ', ' + sw.lng();*/
-  var contentString = '';
+    'New south-west corner: ' + sw.lat() + ', ' + sw.lng();
+  /*var contentString = '';
   for (idx in overlay.txt_) {
     contentString += '<b>' + overlay.txt_[idx] + '</b><br>';
     contentString += '<I>' + 'Relevance: ' + '</I>' + overlay.relevance_[idx] + '<br>';
     //contentString += '<I>' + 'First Appearance: ' + '</I>' + overlay.time_[idx] + '<br>';
-  }
+  }*/
   var center = new google.maps.LatLng(sw.lat() + (ne.lat()-sw.lat())/2, sw.lng() + (ne.lng()-sw.lng())/2);
 
   infoWindow.setContent(contentString);
@@ -327,6 +339,7 @@ function getFontSize(relevance) {
 function getFontColor(age) {
     scale = 30;
     rel = parseInt(age / scale);
+    //rel = Math.floor(Math.random()*5)
     switch(rel) {
       case 0: // 0~29 minute
         return '#b30000';
@@ -338,6 +351,16 @@ function getFontColor(age) {
         return '#fdcc8a';
       default :
         return '#fef0d9';
+      /*case 0: // 0~29 minute
+        return '#252525';
+      case 1: // 30~59
+        return '#2ca25f';
+      case 2: 
+        return '#66c2a4';
+      case 3:
+        return '#b2e2e2';
+      default :
+        return '#edf8fb';*/
     }
 }
 
@@ -554,8 +577,7 @@ function searchTweets(id, entities) {
       // Sorted by Followers    
       tweets.sort(function(a, b) {return b.Followers-a.Followers;});
       for(idx in tweets) {
-        /* 
-        是否只显示最近一小时的tweet       
+        /*      
         var tweetDate = new Date(tweets[idx]['Time']);
         var disDate = nowDate.getTime() - tweetDate.getTime();
         var disMinute = parseInt(disDate/1000/60);
