@@ -16,7 +16,7 @@ Our monitor will keep collecting data from twitter using twitter API. Then we wi
 https://vimeo.com/149609004
 
 ## Demo
-http://nyu-cs6313-fall2015.github.io/Group-7/
+http://Twittermonitor.elasticbeanstalk.com
 
 ## Final Report
 https://drive.google.com/a/nyu.edu/file/d/0B3hx8n-F_S2ZTVcxTThHbUpnMEU/view?usp=sharing
