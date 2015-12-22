@@ -1,6 +1,6 @@
 <?php
     //open connection to mysql db
-    $connection = mysqli_connect("test.c4lshtnnkzfe.us-east-1.rds.amazonaws.com:3306","root","root","test") or die("Error " . mysqli_error($connection));
+    $connection = mysqli_connect("test.c4lshtnnkzfe.us-east-1.rds.amazonaws.com:3306", "root","rootroot","test") or die("Error " . mysqli_error($connection));
 
     //fetch table rows from mysql db
     $sql = "select * from keyword";
